@@ -22,13 +22,14 @@ interface
 uses
   System.SysUtils,
   {$IFDEF USEFasm4Delphi}Fasm4Delphi,{$ENDIF}
-  {$IFDEF USEIOUtils}System.IOUtils{$ENDIF},Windows;
+  {$IFDEF USEIOUtils}System.IOUtils{$ENDIF},Windows,Math;
 
-{$IFNDEF USEFasm4Delphi}
 type
-  TFasmVersion=packed record
+  TFasmVersion={$IFDEF USEFasm4Delphi}Fasm4Delphi.TFasmVersion;
+  {$ELSE}packed record
     V1,V2:word;
   end;
+  {$ENDIF}
 
 const
   //General errors and conditions
@@ -84,28 +85,93 @@ const
   FASMERR_SYMBOL_OUT_OF_SCOPE		      =-136;
   FASMERR_USER_ERROR			      =-140;
   FASMERR_ASSERTION_FAILED		      =-141;
-{$ENDIF}
 
 type
   TFasmError=FASMERR_ASSERTION_FAILED ..FASM_ERROR;
-  TFasmOutPut=record
-    Error:TFasmError;
-    OutStr:string;
+  TFasmLine=record
+    Line:UInt32;
+    &File:string;
   end;
-  TFasmOut=record
+  TFasmResult=record
     OutData:Pointer;
     sb:integer;
-    OutPut:TFasmOutPut;
+    Error:TFasmError;
+    OutStr:string;
+    Lines:array of TFasmLine;
+  end;
+  TErrorNamePair=record
+    Name:string;
+    Code:TFasmError;
   end;
 
 const
-  FASMPath='fasm';
+  FasmPath='fasm';
+  FasmErrorCodeNames:array[TFasmError]of string=('assertion failed',//-141
+    'user error',//-140
+    '','','',//-139,-138,-137
+    'symbol out of scope',//-136
+    'too many repeats',//-135
+    'data already defined',//-134
+    'setting already specified',//-133
+    'section not aligned enough',//-132
+    'extra characters on line',//-131
+    'unexpected instruction',//-130
+    'missing end directive',//-129
+    'missing end quote',//-128
+    'symbol already defined',//-127
+    'reserved word used as symbol',//-126
+    'invalid name',//-125
+    'name too long',//-124
+    'invalid use of symbol',//-123
+    'undefined symbol',//-122
+    'value out of range',//-121
+    'invalid value',//-120
+    'invalid address',//-119
+    'invalid expression',//-118
+    'relative jump out of range',//-117
+    'long immediate not encodable',//-116
+    'disallowed combination of registers',//-115
+    'address sizes do not agree',//-114
+    'invalid address size',//-113
+    'operand sizes do not match',//-112
+    'operand size not specified',//-111
+    'invalid operand size',//-110
+    'invalid operand',//-109
+    'illegal instruction',//-108
+    'invalid argument',//-107
+    'unexpected characters',//-106
+    'incomplete macro',//-105
+    'invalid macro arguments',//-104
+    'invalid file format',//-103
+    'error reading file',//-102
+    'file not found',//-101
+    '','','','','','','','','','','','','','','','','','','','','','','','','',
+ //-100-99-98-97-96-95-94-93-92-91-90-89-88-87-86-85-84-83-82-81-80-79-78-77-76
+    '','','','','','','','','','','','','','','','','','','','','','','','','',
+  //-75-74-73-72-71-70-69-68-67-66-65-64-63-62-61-60-59-58-57-56-55-54-53-52-51
+    '','','','','','','','','','','','','','','','','','','','','','','','','',
+  //-50-49-48-47-46-45-44-43-42-41-40-39-38-37-36-35-34-33-32-31-30-29-28-27-26
+    '','','','','','','','','','','','','','','','',
+  //-25-24-23-22-21-20-19-18-17-16-15-14-13-12-11-10
+    'invalid definition',//-9
+    'write failed',//-8
+    'format limitations excedded',//-7
+    'cannot generate code',//-6
+    'unexpected end of source',//-5
+    'source file not found',//-4
+    'stack overflow',//-3
+    'out of memory',//-2
+    'invalid parameter',//-1
+    'success.',//0
+    'working',//1
+    'error'//2
+    );
 
 function FasmVersion:TFasmVersion;
-function FasmAssemble(const Source:AnsiString;cbMemorySize:cardinal;nPassesLimit:word=100):TFasmOut;
-{function FasmAssembleToFile(const Source,OutFile:AnsiString;cbMemorySize:cardinal;nPassesLimit:word=100):TFasmOutPut;
-function FasmAssembleFile(const Source:AnsiString;cbMemorySize:cardinal;nPassesLimit:word=100):TFasmOut;
-function FasmAssembleFileToFile(const Source,OutFile:AnsiString;cbMemorySize:cardinal;nPassesLimit:word=100):TFasmOutPut;{}
+function FasmAssemble(const Source:AnsiString;cbMemorySize:cardinal=1024*1024;nPassesLimit:DWORD=100):TFasmResult;
+function FasmAssembleToFile(const Source,OutFile:AnsiString;cbMemorySize:cardinal=1024*1024*8;nPassesLimit:DWORD=100):TFasmResult;
+function FasmAssembleFile(const Source:AnsiString;cbMemorySize:cardinal=1024*1024*8;nPassesLimit:DWORD=100):TFasmResult;
+function FasmAssembleFileToFile(const Source,OutFile:AnsiString;cbMemorySize:cardinal=1024*1024*8;nPassesLimit:DWORD=100):TFasmResult;
 
 procedure OpenFASM(Location:string=FASMPath;AsDll:boolean=false);
 procedure SetFasmTemp(Path:string);
@@ -132,7 +198,8 @@ SecAtrtrs.bInheritHandle:=true;
 ZeroMemory(@StartupInfo,SizeOf(StartupInfo));
 StartupInfo.cb:=SizeOf(StartupInfo);
 StartupInfo.dwFlags:=STARTF_USESTDHANDLES;
-Createpipe(OutPut,StartupInfo.hStdOutput,@SecAtrtrs,0);
+Createpipe(OutPut,StartupInfo.hStdOutput,@SecAtrtrs,1024);
+StartupInfo.hStdError:=StartupInfo.hStdOutput;
 if not CreateProcess(nil,PChar('"'+FasmLocation+'" '+Command),nil,nil,true,NORMAL_PRIORITY_CLASS,nil,nil,StartupInfo,ProcessInformation)then
   RaiseLastOSError;
 WaitForSingleObject(ProcessInformation.hProcess,INFINITE);
@@ -184,45 +251,376 @@ end;
 {$ENDIF}
 end;
 
-function FasmAssemble(const Source:AnsiString;cbMemorySize:cardinal;nPassesLimit:word=100):TFasmOut;
-{$IFDEF USEFasm4Delphi}
+function FasmAssemble(const Source:AnsiString;cbMemorySize:cardinal=1024*1024;nPassesLimit:DWORD=100):TFasmResult;
 var
+{$IFDEF USEFasm4Delphi}
   Mem:PFASM_STATE;
-  hDisp,hOut:THandle;
-  n:DWORD;
-  Buff:AnsiChar;
-  SecAtrtrs:TSecurityAttributes;
+  p:PLINE_HEADER;
+{$ELSE}
+  p:pointer;
 {$ENDIF}
+  s,s0:string;
+  nr:cardinal;
+  FileHandle:THandle;
+  i,i1:NativeUInt;
+  i0:TFasmError;
 begin
 {$IFDEF USEFasm4Delphi}
 if IsDll then
 begin
-  SecAtrtrs.nLength:=SizeOf(TSecurityAttributes);
-  SecAtrtrs.lpSecurityDescriptor:=nil;
-  SecAtrtrs.bInheritHandle:=true;
-  CreatePipe(hOut,hDisp,@SecAtrtrs,0);
   GetMem(Mem,cbMemorySize);
-  Result.OutPut.Error:=fasm_Assemble(PAnsiChar(Source),Mem,cbMemorySize,nPassesLimit,hDisp);
-  if Result.OutPut.Error=FASM_OK then
+  ZeroMemory(Mem,cbMemorySize);
+  Result.Error:=fasm_Assemble(PAnsiChar(Source),Mem,cbMemorySize,nPassesLimit);
+  if Result.Error=FASM_OK then
   begin
-
+    GetMem(Result.OutData,Mem.output_length);
+    CopyMemory(Result.OutData,Mem.output_data,Mem.output_length);
+    Result.sb:=Mem.output_length;
+    Result.OutStr:='Success.';
+  end
+  else
+  begin
+    Result.OutData:=nil;
+    Result.sb:=0;
+    Result.OutStr:='Error: '+Mem.error_code.ToString+' '+FasmErrorCodeNames[Mem.error_code];
+    p:=Mem.error_line;
+    nr:=0;
+    while(NativeUInt(p)>=NativeUInt(Mem))and(NativeUInt(Mem)+NativeUInt(cbMemorySize)>=NativeUInt(p))do
+    begin
+      Result.OutStr:=Result.OutStr+sLineBreak+
+        string(p.file_path)+'['+p.line_number.ToString+']';
+      inc(nr);
+      SetLength(Result.Lines,nr);
+      Result.Lines[nr-1].Line:=p.line_number;
+      Result.Lines[nr-1].&File:=string(p.file_path);
+      p:=p^.macro_calling_line;
+    end;
   end;
   FreeMem(Mem);
-  Result.OutPut.OutStr:='';
-  while PeekNamedPipe(hOut,@Buff,1,nil,@n,nil) do
-    if n<>0 then
-    begin
-      ReadFile(hOut,Buff,1,n,nil);
-      Result.OutPut.OutStr:=Result.OutPut.OutStr+Buff;
-    end
-    else
-      break;
-  CloseHandle(hOut);
-  CloseHandle(hDisp);
 end
 else
 begin
 {$ENDIF}
+  s:=FasmTemp+GetTickCount.ToString();
+  FileHandle:=CreateFile(PChar(s+'.in'),GENERIC_WRITE,0,nil,CREATE_ALWAYS,128,0);
+  WriteFile(FileHandle,PAnsiChar(Source)^,length(Source),nr,nil);
+  CloseHandle(FileHandle);
+  Result.OutStr:=RunFasm('-m '+trunc(cbMemorySize/1024).ToString+' -p '+nPassesLimit.ToString+' '+
+    s+'.in '+s);
+  DeleteFile(PChar(s+'.in'));
+  i:=Pos('error: ',Result.OutStr);
+  s0:=Copy(Result.OutStr,i+length('error: '),Pos('.',Result.OutStr,i)-i-length('error: '));
+  if i=0 then
+    Result.Error:=FASM_OK
+  else
+    for i0:=FASMERR_ASSERTION_FAILED to FASM_ERROR do
+      if FasmErrorCodeNames[i0]=s0 then
+        Result.Error:=i0;
+  if Result.Error=FASM_OK then
+  begin
+    FileHandle:=CreateFile(PWideChar(s),GENERIC_READ,0,nil,3,128,0);
+    Result.sb:=GetFileSize(FileHandle,nil);
+    getmem(Result.OutData,Result.sb);
+    ReadFile(FileHandle,Result.OutData,Result.sb,nr,nil);
+    CloseHandle(FileHandle);
+    DeleteFile(PChar(s));
+  end
+  else
+  begin
+    Result.OutData:=nil;
+    Result.sb:=0;
+    i:=Pos(sLineBreak,Result.OutStr)+length(sLineBreak);
+    nr:=0;
+    i1:=Pos(']:',Result.OutStr,i);
+    while i1<>0 do
+    begin
+      inc(nr);
+      SetLength(Result.Lines,nr);
+      i1:=Pos(' [',Result.OutStr,i);
+      Result.Lines[nr-1].&File:=Copy(Result.OutStr,i,i1-i);
+      i:=i1+2;
+      i1:=Pos(']:',Result.OutStr,i);
+      Result.Lines[nr-1].Line:=Copy(Result.OutStr,i,i1-i).ToInteger;
+      for i0:=0 to 2 do
+        i:=Pos(sLineBreak,Result.OutStr,i)+length(sLineBreak);
+      i1:=Pos(']:',Result.OutStr,i);
+    end;
+  end;
+{$IFDEF USEFasm4Delphi}
+end;
+{$ENDIF}
+end;
+
+function FasmAssembleToFile(const Source,OutFile:AnsiString;cbMemorySize:cardinal=1024*1024*8;nPassesLimit:DWORD=100):TFasmResult;
+var
+{$IFDEF USEFasm4Delphi}
+  Mem:PFASM_STATE;
+  p:PLINE_HEADER;
+{$ELSE}
+  p:pointer;
+{$ENDIF}
+  s,s0:string;
+  nr:cardinal;
+  FileHandle:THandle;
+  i,i1:NativeUInt;
+  i0:TFasmError;
+begin
+{$IFDEF USEFasm4Delphi}
+if IsDll then
+begin
+  GetMem(Mem,cbMemorySize);
+  ZeroMemory(Mem,cbMemorySize);
+  Result.Error:=fasm_Assemble(PAnsiChar(Source),Mem,cbMemorySize,nPassesLimit);
+  Result.OutData:=nil;
+  Result.sb:=0;
+  if Result.Error=FASM_OK then
+  begin
+    FileHandle:=CreateFile(PWideChar(OutFile),GENERIC_READ,0,nil,3,128,0);
+    WriteFile(FileHandle,Mem.output_data^,Mem.output_length,nr,nil);
+    CloseHandle(FileHandle);
+    Result.OutStr:='Success.';
+  end
+  else
+  begin
+    Result.OutStr:='Error: '+Mem.error_code.ToString+' '+FasmErrorCodeNames[Mem.error_code];
+    p:=Mem.error_line;
+    nr:=0;
+    while(NativeUInt(p)>=NativeUInt(Mem))and(NativeUInt(Mem)+NativeUInt(cbMemorySize)>=NativeUInt(p))do
+    begin
+      Result.OutStr:=Result.OutStr+sLineBreak+
+        string(p.file_path)+'['+p.line_number.ToString+']';
+      inc(nr);
+      SetLength(Result.Lines,nr);
+      Result.Lines[nr-1].Line:=p.line_number;
+      Result.Lines[nr-1].&File:=string(p.file_path);
+      p:=p^.macro_calling_line;
+    end;
+  end;
+  FreeMem(Mem);
+end
+else
+begin
+{$ENDIF}
+  s:=FasmTemp+GetTickCount.ToString();
+  FileHandle:=CreateFile(PChar(s),GENERIC_WRITE,0,nil,CREATE_ALWAYS,128,0);
+  WriteFile(FileHandle,PAnsiChar(Source)^,length(Source),nr,nil);
+  CloseHandle(FileHandle);
+  Result.OutStr:=RunFasm('-m '+trunc(cbMemorySize/1024).ToString+' -p '+nPassesLimit.ToString+' '+
+    s+' '+OutFile);
+  DeleteFile(PChar(s));
+  i:=Pos('error: ',Result.OutStr);
+  s0:=Copy(Result.OutStr,i+length('error: '),Pos('.',Result.OutStr,i)-i-length('error: '));
+  if i=0 then
+    Result.Error:=FASM_OK
+  else
+    for i0:=FASMERR_ASSERTION_FAILED to FASM_ERROR do
+      if FasmErrorCodeNames[i0]=s0 then
+        Result.Error:=i0;
+  Result.OutData:=nil;
+  Result.sb:=0;
+  if Result.Error<>FASM_OK then
+  begin
+    i:=Pos(sLineBreak,Result.OutStr)+length(sLineBreak);
+    nr:=0;
+    i1:=Pos(']:',Result.OutStr,i);
+    while i1<>0 do
+    begin
+      inc(nr);
+      SetLength(Result.Lines,nr);
+      i1:=Pos(' [',Result.OutStr,i);
+      Result.Lines[nr-1].&File:=Copy(Result.OutStr,i,i1-i);
+      i:=i1+2;
+      i1:=Pos(']:',Result.OutStr,i);
+      Result.Lines[nr-1].Line:=Copy(Result.OutStr,i,i1-i).ToInteger;
+      for i0:=0 to 2 do
+        i:=Pos(sLineBreak,Result.OutStr,i)+length(sLineBreak);
+      i1:=Pos(']:',Result.OutStr,i);
+    end;
+  end;
+{$IFDEF USEFasm4Delphi}
+end;
+{$ENDIF}
+end;
+
+function FasmAssembleFile(const Source:AnsiString;cbMemorySize:cardinal=1024*1024*8;nPassesLimit:DWORD=100):TFasmResult;
+var
+{$IFDEF USEFasm4Delphi}
+  Mem:PFASM_STATE;
+  p:PLINE_HEADER;
+{$ELSE}
+  p:pointer;
+{$ENDIF}
+  s,s0:string;
+  nr:cardinal;
+  FileHandle:THandle;
+  i,i1:NativeUInt;
+  i0:TFasmError;
+begin
+{$IFDEF USEFasm4Delphi}
+if IsDll then
+begin
+  GetMem(Mem,cbMemorySize);
+  ZeroMemory(Mem,cbMemorySize);
+  Result.Error:=fasm_AssembleFile(PAnsiChar(Source),Mem,cbMemorySize,nPassesLimit);
+  if Result.Error=FASM_OK then
+  begin
+    GetMem(Result.OutData,Mem.output_length);
+    CopyMemory(Result.OutData,Mem.output_data,Mem.output_length);
+    Result.sb:=Mem.output_length;
+    Result.OutStr:='Success.';
+  end
+  else
+  begin
+    Result.OutData:=nil;
+    Result.sb:=0;
+    Result.OutStr:='Error: '+Mem.error_code.ToString+' '+FasmErrorCodeNames[Mem.error_code];
+    p:=Mem.error_line;
+    nr:=0;
+    while(NativeUInt(p)>=NativeUInt(Mem))and(NativeUInt(Mem)+NativeUInt(cbMemorySize)>=NativeUInt(p))do
+    begin
+      Result.OutStr:=Result.OutStr+sLineBreak+
+        string(p.file_path)+'['+p.line_number.ToString+']';
+      inc(nr);
+      SetLength(Result.Lines,nr);
+      Result.Lines[nr-1].Line:=p.line_number;
+      Result.Lines[nr-1].&File:=string(p.file_path);
+      p:=p^.macro_calling_line;
+    end;
+  end;
+  FreeMem(Mem);
+end
+else
+begin
+{$ENDIF}
+  s:=FasmTemp+GetTickCount.ToString();
+  Result.OutStr:=RunFasm('-m '+trunc(cbMemorySize/1024).ToString+' -p '+nPassesLimit.ToString+' '+
+    Source+' '+s);
+  i:=Pos('error: ',Result.OutStr);
+  s0:=Copy(Result.OutStr,i+length('error: '),Pos('.',Result.OutStr,i)-i-length('error: '));
+  if i=0 then
+    Result.Error:=FASM_OK
+  else
+    for i0:=FASMERR_ASSERTION_FAILED to FASM_ERROR do
+      if FasmErrorCodeNames[i0]=s0 then
+        Result.Error:=i0;
+  if Result.Error=FASM_OK then
+  begin
+    FileHandle:=CreateFile(PWideChar(s),GENERIC_READ,0,nil,3,128,0);
+    Result.sb:=GetFileSize(FileHandle,nil);
+    getmem(Result.OutData,Result.sb);
+    ReadFile(FileHandle,Result.OutData,Result.sb,nr,nil);
+    CloseHandle(FileHandle);
+    DeleteFile(PChar(s));
+  end
+  else
+  begin
+    Result.OutData:=nil;
+    Result.sb:=0;
+    i:=Pos(sLineBreak,Result.OutStr)+length(sLineBreak);
+    nr:=0;
+    i1:=Pos(']:',Result.OutStr,i);
+    while i1<>0 do
+    begin
+      inc(nr);
+      SetLength(Result.Lines,nr);
+      i1:=Pos(' [',Result.OutStr,i);
+      Result.Lines[nr-1].&File:=Copy(Result.OutStr,i,i1-i);
+      i:=i1+2;
+      i1:=Pos(']:',Result.OutStr,i);
+      Result.Lines[nr-1].Line:=Copy(Result.OutStr,i,i1-i).ToInteger;
+      for i0:=0 to 2 do
+        i:=Pos(sLineBreak,Result.OutStr,i)+length(sLineBreak);
+      i1:=Pos(']:',Result.OutStr,i);
+    end;
+  end;
+{$IFDEF USEFasm4Delphi}
+end;
+{$ENDIF}
+end;
+
+function FasmAssembleFileToFile(const Source,OutFile:AnsiString;cbMemorySize:cardinal=1024*1024*8;nPassesLimit:DWORD=100):TFasmResult;
+var
+{$IFDEF USEFasm4Delphi}
+  Mem:PFASM_STATE;
+  p:PLINE_HEADER;
+  FileHandle:THandle;
+{$ELSE}
+  p:pointer;
+{$ENDIF}
+  s0:string;
+  nr:cardinal;
+  i,i1:NativeUInt;
+  i0:TFasmError;
+begin
+{$IFDEF USEFasm4Delphi}
+if IsDll then
+begin
+  GetMem(Mem,cbMemorySize);
+  ZeroMemory(Mem,cbMemorySize);
+  Result.Error:=fasm_AssembleFile(PAnsiChar(Source),Mem,cbMemorySize,nPassesLimit);
+  Result.OutData:=nil;
+  Result.sb:=0;
+  if Result.Error=FASM_OK then
+  begin
+    FileHandle:=CreateFile(PWideChar(OutFile),GENERIC_READ,0,nil,3,128,0);
+    WriteFile(FileHandle,Mem.output_data^,Mem.output_length,nr,nil);
+    CloseHandle(FileHandle);
+    Result.OutStr:='Success.';
+  end
+  else
+  begin
+    Result.OutData:=nil;
+    Result.sb:=0;
+    Result.OutStr:='Error: '+Mem.error_code.ToString+' '+FasmErrorCodeNames[Mem.error_code];
+    p:=Mem.error_line;
+    nr:=0;
+    while(NativeUInt(p)>=NativeUInt(Mem))and(NativeUInt(Mem)+NativeUInt(cbMemorySize)>=NativeUInt(p))do
+    begin
+      Result.OutStr:=Result.OutStr+sLineBreak+
+        string(p.file_path)+'['+p.line_number.ToString+']';
+      inc(nr);
+      SetLength(Result.Lines,nr);
+      Result.Lines[nr-1].Line:=p.line_number;
+      Result.Lines[nr-1].&File:=string(p.file_path);
+      p:=p^.macro_calling_line;
+    end;
+  end;
+  FreeMem(Mem);
+end
+else
+begin
+{$ENDIF}
+  Result.OutStr:=RunFasm('-m '+trunc(cbMemorySize/1024).ToString+' -p '+nPassesLimit.ToString+' '+
+    Source+' '+OutFile);
+  i:=Pos('error: ',Result.OutStr);
+  s0:=Copy(Result.OutStr,i+length('error: '),Pos('.',Result.OutStr,i)-i-length('error: '));
+  if i=0 then
+    Result.Error:=FASM_OK
+  else
+    for i0:=FASMERR_ASSERTION_FAILED to FASM_ERROR do
+      if FasmErrorCodeNames[i0]=s0 then
+        Result.Error:=i0;
+  Result.OutData:=nil;
+  Result.sb:=0;
+  if Result.Error=FASM_OK then
+  begin
+    i:=Pos(sLineBreak,Result.OutStr)+length(sLineBreak);
+    nr:=0;
+    i1:=Pos(']:',Result.OutStr,i);
+    while i1<>0 do
+    begin
+      inc(nr);
+      SetLength(Result.Lines,nr);
+      i1:=Pos(' [',Result.OutStr,i);
+      Result.Lines[nr-1].&File:=Copy(Result.OutStr,i,i1-i);
+      i:=i1+2;
+      i1:=Pos(']:',Result.OutStr,i);
+      Result.Lines[nr-1].Line:=Copy(Result.OutStr,i,i1-i).ToInteger;
+      for i0:=0 to 2 do
+        i:=Pos(sLineBreak,Result.OutStr,i)+length(sLineBreak);
+      i1:=Pos(']:',Result.OutStr,i);
+    end;
+  end;
 {$IFDEF USEFasm4Delphi}
 end;
 {$ENDIF}
@@ -231,11 +629,15 @@ end;
 procedure OpenFASM(Location:string=FASMPath;AsDll:boolean=false);
 begin
 {$IFDEF USEFasm4Delphi}
+{$IF Declared(FreeFASM)}
 if IsDll then
   FreeFASM;
+{$ENDIF}
 IsDll:=AsDll;
+{$IF Declared(LoadFASM)}
 if AsDll then
   LoadFASM(Location);
+{$ENDIF}
 FasmLocation:=Location;
 {$ELSE}
 if not AsDll then

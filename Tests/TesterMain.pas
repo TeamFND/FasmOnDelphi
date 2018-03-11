@@ -40,40 +40,46 @@ begin
 end;
 
 procedure TMyTestObject.Test1;
+var
+  Res:TFasmResult;
 begin
-if fasm_AssembleFile('..\..\Test1.ASM',CompliterMem,CompliterMemSize)<>FASM_OK then
+Res:=FasmAssembleFileToFile('..\..\Test1.ASM','..\..\Test1..bin');
+if Res.Error<>FASM_OK then
   raise Exception.Create('Condition:    '+CompliterMem^.condition.ToString+sLineBreak+
                          'Error Code:   '+CompliterMem^.error_code.ToString+sLineBreak);
 end;
 
 procedure TMyTestObject.Test2;
 var
-  Res:TFasmOut;
+  Res:TFasmResult;
 begin
-Res:=FasmAssemble('add eax,',CompliterMemSize);
-raise Exception.Create('Answ:      '+Res.OutPut.OutStr+sLineBreak);
-                       //'Error Code:'+CompliterMem^.error_code.ToString+sLineBreak);
-if Res.OutPut.Error<>FASM_OK then
-  raise Exception.Create('Condition:    '+CompliterMem^.condition.ToString+sLineBreak+
-                         'Error Code:   '+CompliterMem^.error_code.ToString+sLineBreak);
+Res:=FasmAssemble('add eax,0');
+if Res.Error<>FASM_OK then
+  raise Exception.Create('Condition:    '+Res.OutStr+sLineBreak+
+                         'Error Code:   '+IntToStr(Res.Error)+sLineBreak);
 end;
 
 procedure TMyTestObject.Test3;
+var
+  Res:TFasmResult;
 begin
-if fasm_AssembleFile('..\..\..\FasmDll\FASM.ASH',CompliterMem,CompliterMemSize)=FASM_OK then
-  raise Exception.Create('FASM is compiling something that it is can not compile at all.');
+Res:=FasmAssembleFile('..\..\..\Fasm4Delphi\FasmDll\FASM.ASH');
+if Res.Error=FASM_OK then
+  raise Exception.Create('FASM is compiling something that it is can not compile at all.')
 end;
 
 procedure TMyTestObject.Test4;
+var
+  Res:TFasmResult;
 begin
-if fasm_Assemble('call -100',CompliterMem,CompliterMemSize)<>FASM_OK then
-  raise Exception.Create('Condition:    '+CompliterMem^.condition.ToString+sLineBreak+
-                         'Error Code:   '+CompliterMem^.error_code.ToString+sLineBreak);
+Res:=FasmAssembleToFile('add eax,0','test');
+if Res.Error<>FASM_OK then
+  raise Exception.Create('Condition:    '+Res.OutStr+sLineBreak+
+                         'Error Code:   '+IntToStr(Res.Error)+sLineBreak);
 end;
 
 initialization
   TDUnitX.RegisterTestFixture(TMyTestObject);
-  OpenFASM('..\..\..\Fasm4Delphi\FasmDll\FASM.DLL',true);
-  //OpenFASM('..\..\..\fasmw172\FASM.EXE');
+  OpenFASM('..\..\..\fasmw172\FASM.EXE');
   GetMem(CompliterMem,CompliterMemSize);
 end.
