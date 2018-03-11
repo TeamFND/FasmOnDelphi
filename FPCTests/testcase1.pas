@@ -5,7 +5,7 @@ unit TestCase1;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testutils, testregistry,Fasm4Delphi;
+  Classes, SysUtils, fpcunit, testutils, testregistry,FasmOnDelphi;
 
 type
 
@@ -16,36 +16,35 @@ type
 
 implementation
 
-const
-  CompliterMemSize=$10000;
-
-var
-  CompliterMem:PFASM_STATE;
-
 procedure TTestCase1.TestHookUp;
+var
+  Res:TFasmResult;
 begin
-  if fasm_AssembleFile('..\Tests\Test1.asm',CompliterMem,CompliterMemSize)<>FASM_OK then
-    Fail('Error in test1:'+sLineBreak+
-         'Condition:    '+CompliterMem^.condition.ToString+sLineBreak+
-         'Error Code:   '+CompliterMem^.error_code.ToString);
-  if fasm_Assemble('add eax,0',CompliterMem,CompliterMemSize)<>FASM_OK then
-    writeln('Error in test2:'+sLineBreak+
-         'Condition:    '+CompliterMem^.condition.ToString+sLineBreak+
-         'Error Code:   '+CompliterMem^.error_code.ToString);
-  if fasm_AssembleFile('..\FasmDll\FASM.ASH',CompliterMem,CompliterMemSize)=FASM_OK then
-    Fail('Error in test3:'+sLineBreak+
-         'FASM is compiling something that it is can not compile at all.');
-  if fasm_Assemble('call -100',CompliterMem,CompliterMemSize)<>FASM_OK then
-    Fail('Error in test4:'+sLineBreak+
-         'Condition:    '+CompliterMem^.condition.ToString+sLineBreak+
-         'Error Code:   '+CompliterMem^.error_code.ToString);
+Res:=FasmAssembleFileToFile('..\Tests\Test1.ASM','..\Tests\Test1.bin');
+if Res.Error<>FASM_OK then
+  Fail('Error in test1:'+sLineBreak+
+       'Condition:    '+Res.OutStr+sLineBreak+
+       'Error Code:   '+IntToStr(Res.Error)+sLineBreak);
+Res:=FasmAssemble('add eax,0');
+if Res.Error<>FASM_OK then
+  Fail('Error in test2:'+sLineBreak+
+       'Condition:    '+Res.OutStr+sLineBreak+
+       'Error Code:   '+IntToStr(Res.Error)+sLineBreak);
+Res:=FasmAssembleFile('..\Fasm4Delphi\FasmDll\FASM.ASH');
+if Res.Error=FASM_OK then
+  Fail('Error in test3:'+sLineBreak+
+       'FASM is compiling something that it is can not compile at all.');
+Res:=FasmAssembleToFile('add eax,0','test');
+if Res.Error<>FASM_OK then
+  Fail('Error in test4:'+sLineBreak+
+       'Condition: '+Res.OutStr+sLineBreak+
+       'Error Code:'+IntToStr(Res.Error)+sLineBreak);
 end;
 
 
 
 initialization
-  LoadFASM('..\FasmDll\FASM.DLL');
-  GetMem(CompliterMem,CompliterMemSize);
+  OpenFASM('..\fasmw172\FASM.EXE');
   RegisterTest(TTestCase1);
 end.
 

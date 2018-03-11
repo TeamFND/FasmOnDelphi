@@ -22,12 +22,6 @@ type
     [Test]
     procedure Test4;
   end;
-
-const
-  CompliterMemSize=$10000;
-
-var
-  CompliterMem:PFASM_STATE;
   
 implementation
 
@@ -45,8 +39,8 @@ var
 begin
 Res:=FasmAssembleFileToFile('..\..\Test1.ASM','..\..\Test1..bin');
 if Res.Error<>FASM_OK then
-  raise Exception.Create('Condition:    '+CompliterMem^.condition.ToString+sLineBreak+
-                         'Error Code:   '+CompliterMem^.error_code.ToString+sLineBreak);
+  raise Exception.Create('Condition:    '+Res.OutStr+sLineBreak+
+                         'Error Code:   '+IntToStr(Res.Error)+sLineBreak);
 end;
 
 procedure TMyTestObject.Test2;
@@ -74,12 +68,11 @@ var
 begin
 Res:=FasmAssembleToFile('add eax,0','test');
 if Res.Error<>FASM_OK then
-  raise Exception.Create('Condition:    '+Res.OutStr+sLineBreak+
-                         'Error Code:   '+IntToStr(Res.Error)+sLineBreak);
+  raise Exception.Create('Condition: '+Res.OutStr+sLineBreak+
+                         'Error Code:'+IntToStr(Res.Error)+sLineBreak);
 end;
 
 initialization
   TDUnitX.RegisterTestFixture(TMyTestObject);
   OpenFASM('..\..\..\fasmw172\FASM.EXE');
-  GetMem(CompliterMem,CompliterMemSize);
 end.

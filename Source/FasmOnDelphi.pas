@@ -1,4 +1,4 @@
-unit FasmOnDelphi platform;
+unit FasmOnDelphi;
 
 {Delphi Translation&Tests:Artyom Gavrilov,Vlad Untkin.
  Donate:https://money.yandex.ru/to/410014959153552}
@@ -20,9 +20,9 @@ interface
 {$ENDIF}
 
 uses
-  System.SysUtils,
+  SysUtils,
   {$IFDEF USEFasm4Delphi}Fasm4Delphi,{$ENDIF}
-  {$IFDEF USEIOUtils}System.IOUtils{$ENDIF},Windows,Math;
+  {$IFDEF USEIOUtils}System.IOUtils,{$ENDIF}Windows,Math;
 
 type
   TFasmVersion={$IFDEF USEFasm4Delphi}Fasm4Delphi.TFasmVersion;
@@ -178,12 +178,51 @@ procedure SetFasmTemp(Path:string);
 
 implementation
 
+{$IFDEF FPC}
+function GetLongPathNameA(lpszShortPath: LPSTR; lpszLongPath: LPSTR;
+  cchBuffer: DWORD): DWORD; stdcall;external 'Kernel32.dll';
+
+function Pos(const SubStr,Str:AnsiString;Offset:Integer): Integer; overload;
+var
+  I, LIterCnt, L, J: Integer;
+  PSubStr, PS: PAnsiChar;
+begin
+  L := Length(SubStr);
+  { Calculate the number of possible iterations. Not valid if Offset < 1. }
+  LIterCnt := Length(Str) - Offset - L + 1;
+
+  { Only continue if the number of iterations is positive or zero (there is space to check) }
+  if (Offset > 0) and (LIterCnt >= 0) and (L > 0) then
+  begin
+    PSubStr := PAnsiChar(SubStr);
+    PS := PAnsiChar(Str);
+    Inc(PS, Offset - 1);
+
+    for I := 0 to LIterCnt do
+    begin
+      J := 0;
+      while (J >= 0) and (J < L) do
+      begin
+        if PS[I + J] = PSubStr[J] then
+          Inc(J)
+        else
+          J := -1;
+      end;
+      if J >= L then
+        Exit(I + Offset);
+    end;
+  end;
+
+  Result := 0;
+end;
+{$ENDIF}
+
 var
   FasmLocation:string='FASM';
   FasmTemp:string;
   IsDll:boolean=false;
 
-function RunFasm(Command:string):string;
+function RunFasm(Command:AnsiString):string;
 var
   StartupInfo:TStartupInfo;
   ProcessInformation:TProcessInformation;
@@ -227,7 +266,7 @@ var
 begin
 {$IFDEF USEFasm4Delphi}
 if IsDll then
-  Result:=fasm_GetVersion
+  Result:=fasm_GetVersion()
 else
 begin
 {$ENDIF}
@@ -273,26 +312,26 @@ begin
   Result.Error:=fasm_Assemble(PAnsiChar(Source),Mem,cbMemorySize,nPassesLimit);
   if Result.Error=FASM_OK then
   begin
-    GetMem(Result.OutData,Mem.output_length);
-    CopyMemory(Result.OutData,Mem.output_data,Mem.output_length);
-    Result.sb:=Mem.output_length;
+    GetMem(Result.OutData,Mem^.output_length);
+    CopyMemory(Result.OutData,Mem^.output_data,Mem^.output_length);
+    Result.sb:=Mem^.output_length;
     Result.OutStr:='Success.';
   end
   else
   begin
     Result.OutData:=nil;
     Result.sb:=0;
-    Result.OutStr:='Error: '+Mem.error_code.ToString+' '+FasmErrorCodeNames[Mem.error_code];
-    p:=Mem.error_line;
+    Result.OutStr:='Error: '+Mem^.error_code.ToString+' '+FasmErrorCodeNames[Mem^.error_code];
+    p:=Mem^.error_line;
     nr:=0;
     while(NativeUInt(p)>=NativeUInt(Mem))and(NativeUInt(Mem)+NativeUInt(cbMemorySize)>=NativeUInt(p))do
     begin
       Result.OutStr:=Result.OutStr+sLineBreak+
-        string(p.file_path)+'['+p.line_number.ToString+']';
+        string(p^.file_path)+'['+p^.line_number.ToString+']';
       inc(nr);
       SetLength(Result.Lines,nr);
-      Result.Lines[nr-1].Line:=p.line_number;
-      Result.Lines[nr-1].&File:=string(p.file_path);
+      Result.Lines[nr-1].Line:=p^.line_number;
+      Result.Lines[nr-1].&File:=string(p^.file_path);
       p:=p^.macro_calling_line;
     end;
   end;
@@ -318,7 +357,7 @@ begin
         Result.Error:=i0;
   if Result.Error=FASM_OK then
   begin
-    FileHandle:=CreateFile(PWideChar(s),GENERIC_READ,0,nil,3,128,0);
+    FileHandle:=CreateFile(PChar(s),GENERIC_READ,0,nil,3,128,0);
     Result.sb:=GetFileSize(FileHandle,nil);
     getmem(Result.OutData,Result.sb);
     ReadFile(FileHandle,Result.OutData,Result.sb,nr,nil);
@@ -375,24 +414,24 @@ begin
   Result.sb:=0;
   if Result.Error=FASM_OK then
   begin
-    FileHandle:=CreateFile(PWideChar(OutFile),GENERIC_READ,0,nil,3,128,0);
-    WriteFile(FileHandle,Mem.output_data^,Mem.output_length,nr,nil);
+    FileHandle:=CreateFile(PChar(OutFile),GENERIC_WRITE,0,nil,3,128,0);
+    WriteFile(FileHandle,Mem^.output_data^,Mem^.output_length,nr,nil);
     CloseHandle(FileHandle);
     Result.OutStr:='Success.';
   end
   else
   begin
-    Result.OutStr:='Error: '+Mem.error_code.ToString+' '+FasmErrorCodeNames[Mem.error_code];
-    p:=Mem.error_line;
+    Result.OutStr:='Error: '+Mem^.error_code.ToString+' '+FasmErrorCodeNames[Mem^.error_code];
+    p:=Mem^.error_line;
     nr:=0;
     while(NativeUInt(p)>=NativeUInt(Mem))and(NativeUInt(Mem)+NativeUInt(cbMemorySize)>=NativeUInt(p))do
     begin
       Result.OutStr:=Result.OutStr+sLineBreak+
-        string(p.file_path)+'['+p.line_number.ToString+']';
+        string(p^.file_path)+'['+p^.line_number.ToString+']';
       inc(nr);
       SetLength(Result.Lines,nr);
-      Result.Lines[nr-1].Line:=p.line_number;
-      Result.Lines[nr-1].&File:=string(p.file_path);
+      Result.Lines[nr-1].Line:=p^.line_number;
+      Result.Lines[nr-1].&File:=string(p^.file_path);
       p:=p^.macro_calling_line;
     end;
   end;
@@ -464,26 +503,26 @@ begin
   Result.Error:=fasm_AssembleFile(PAnsiChar(Source),Mem,cbMemorySize,nPassesLimit);
   if Result.Error=FASM_OK then
   begin
-    GetMem(Result.OutData,Mem.output_length);
-    CopyMemory(Result.OutData,Mem.output_data,Mem.output_length);
-    Result.sb:=Mem.output_length;
+    GetMem(Result.OutData,Mem^.output_length);
+    CopyMemory(Result.OutData,Mem^.output_data,Mem^.output_length);
+    Result.sb:=Mem^.output_length;
     Result.OutStr:='Success.';
   end
   else
   begin
     Result.OutData:=nil;
     Result.sb:=0;
-    Result.OutStr:='Error: '+Mem.error_code.ToString+' '+FasmErrorCodeNames[Mem.error_code];
-    p:=Mem.error_line;
+    Result.OutStr:='Error: '+Mem^.error_code.ToString+' '+FasmErrorCodeNames[Mem^.error_code];
+    p:=Mem^.error_line;
     nr:=0;
     while(NativeUInt(p)>=NativeUInt(Mem))and(NativeUInt(Mem)+NativeUInt(cbMemorySize)>=NativeUInt(p))do
     begin
       Result.OutStr:=Result.OutStr+sLineBreak+
-        string(p.file_path)+'['+p.line_number.ToString+']';
+        string(p^.file_path)+'['+p^.line_number.ToString+']';
       inc(nr);
       SetLength(Result.Lines,nr);
-      Result.Lines[nr-1].Line:=p.line_number;
-      Result.Lines[nr-1].&File:=string(p.file_path);
+      Result.Lines[nr-1].Line:=p^.line_number;
+      Result.Lines[nr-1].&File:=string(p^.file_path);
       p:=p^.macro_calling_line;
     end;
   end;
@@ -505,7 +544,7 @@ begin
         Result.Error:=i0;
   if Result.Error=FASM_OK then
   begin
-    FileHandle:=CreateFile(PWideChar(s),GENERIC_READ,0,nil,3,128,0);
+    FileHandle:=CreateFile(PChar(s),GENERIC_READ,0,nil,3,128,0);
     Result.sb:=GetFileSize(FileHandle,nil);
     getmem(Result.OutData,Result.sb);
     ReadFile(FileHandle,Result.OutData,Result.sb,nr,nil);
@@ -562,8 +601,8 @@ begin
   Result.sb:=0;
   if Result.Error=FASM_OK then
   begin
-    FileHandle:=CreateFile(PWideChar(OutFile),GENERIC_READ,0,nil,3,128,0);
-    WriteFile(FileHandle,Mem.output_data^,Mem.output_length,nr,nil);
+    FileHandle:=CreateFile(PChar(OutFile),GENERIC_READ,0,nil,3,128,0);
+    WriteFile(FileHandle,Mem^.output_data^,Mem^.output_length,nr,nil);
     CloseHandle(FileHandle);
     Result.OutStr:='Success.';
   end
@@ -571,17 +610,17 @@ begin
   begin
     Result.OutData:=nil;
     Result.sb:=0;
-    Result.OutStr:='Error: '+Mem.error_code.ToString+' '+FasmErrorCodeNames[Mem.error_code];
-    p:=Mem.error_line;
+    Result.OutStr:='Error: '+Mem^.error_code.ToString+' '+FasmErrorCodeNames[Mem^.error_code];
+    p:=Mem^.error_line;
     nr:=0;
     while(NativeUInt(p)>=NativeUInt(Mem))and(NativeUInt(Mem)+NativeUInt(cbMemorySize)>=NativeUInt(p))do
     begin
       Result.OutStr:=Result.OutStr+sLineBreak+
-        string(p.file_path)+'['+p.line_number.ToString+']';
+        string(p^.file_path)+'['+p^.line_number.ToString+']';
       inc(nr);
       SetLength(Result.Lines,nr);
-      Result.Lines[nr-1].Line:=p.line_number;
-      Result.Lines[nr-1].&File:=string(p.file_path);
+      Result.Lines[nr-1].Line:=p^.line_number;
+      Result.Lines[nr-1].&File:=string(p^.file_path);
       p:=p^.macro_calling_line;
     end;
   end;
@@ -658,12 +697,12 @@ initialization
 {$IFDEF FPC}
 {$IFDEF WINDOWS}
 begin
-  SetLength(Result,MAX_PATH);
+  SetLength(FasmTemp,MAX_PATH);
   Len:=GetTempPath(MAX_PATH,PChar(FasmTemp));
   if Len<>0 then
   begin
-    Len:=GetLongPathName(PChar(FasmTemp),nil,0);
-    GetLongPathName(PChar(FasmTemp),PChar(FasmTemp),Len);
+    Len:=GetLongPathNameA(PChar(FasmTemp),nil,0);
+    GetLongPathNameA(PChar(FasmTemp),PChar(FasmTemp),Len);
     SetLength(FasmTemp,Len-1);
   end
   else

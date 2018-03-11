@@ -39,7 +39,7 @@
         <PackageName Value="FCL"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="3">
+    <Units Count="4">
       <Unit0>
         <Filename Value="fpcunitproject1.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -50,9 +50,13 @@
         <UnitName Value="TestCase1"/>
       </Unit1>
       <Unit2>
-        <Filename Value="..\Source\Fasm4Delphi.pas"/>
+        <Filename Value="..\Source\FasmOnDelphi.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit2>
+      <Unit3>
+        <Filename Value="..\Fasm4Delphi\Source\Fasm4Delphi.pas"/>
+        <IsPartOfProject Value="True"/>
+      </Unit3>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -60,11 +64,11 @@
     <PathDelim Value="\"/>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="..\Source"/>
+      <OtherUnitFiles Value="..\Source;..\Fasm4Delphi\Source"/>
     </SearchPaths>
   </CompilerOptions>
   <Debugging>
-    <Exceptions Count="3">
+    <Exceptions Count="4">
       <Item1>
         <Name Value="EAbort"/>
       </Item1>
@@ -74,6 +78,9 @@
       <Item3>
         <Name Value="EFOpenError"/>
       </Item3>
+      <Item4>
+        <Name Value="EOSError"/>
+      </Item4>
     </Exceptions>
   </Debugging>
 </CONFIG>
