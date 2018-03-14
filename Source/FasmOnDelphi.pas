@@ -182,38 +182,26 @@ implementation
 function GetLongPathNameA(lpszShortPath: LPSTR; lpszLongPath: LPSTR;
   cchBuffer: DWORD): DWORD; stdcall;external 'Kernel32.dll';
 
-function Pos(const SubStr,Str:AnsiString;Offset:Integer): Integer; overload;
+function Pos(const SubStr,Str:AnsiString;Offset:Integer=0):Integer;
 var
-  I, LIterCnt, L, J: Integer;
-  PSubStr, PS: PAnsiChar;
+  f:boolean;
 begin
-  L := Length(SubStr);
-  { Calculate the number of possible iterations. Not valid if Offset < 1. }
-  LIterCnt := Length(Str) - Offset - L + 1;
-
-  { Only continue if the number of iterations is positive or zero (there is space to check) }
-  if (Offset > 0) and (LIterCnt >= 0) and (L > 0) then
+for Result:=Offset+1 to length(Str)-length(SubStr)+1 do
+begin
+  if SubStr[1]=Str[Result] then
   begin
-    PSubStr := PAnsiChar(SubStr);
-    PS := PAnsiChar(Str);
-    Inc(PS, Offset - 1);
-
-    for I := 0 to LIterCnt do
-    begin
-      J := 0;
-      while (J >= 0) and (J < L) do
+    f:=true;
+    for Offset:=1 to Length(SubStr)-1 do
+      if SubStr[1+Offset]<>Str[Result+Offset] then
       begin
-        if PS[I + J] = PSubStr[J] then
-          Inc(J)
-        else
-          J := -1;
+        f:=false;
+        break;
       end;
-      if J >= L then
-        Exit(I + Offset);
-    end;
+    if f then
+      exit;
   end;
-
-  Result := 0;
+end;
+Result:=0;
 end;
 {$ENDIF}
 
@@ -360,7 +348,7 @@ begin
     FileHandle:=CreateFile(PChar(s),GENERIC_READ,0,nil,3,128,0);
     Result.sb:=GetFileSize(FileHandle,nil);
     getmem(Result.OutData,Result.sb);
-    ReadFile(FileHandle,Result.OutData,Result.sb,nr,nil);
+    ReadFile(FileHandle,Result.OutData^,Result.sb,nr,nil);
     CloseHandle(FileHandle);
     DeleteFile(PChar(s));
   end
@@ -547,7 +535,7 @@ begin
     FileHandle:=CreateFile(PChar(s),GENERIC_READ,0,nil,3,128,0);
     Result.sb:=GetFileSize(FileHandle,nil);
     getmem(Result.OutData,Result.sb);
-    ReadFile(FileHandle,Result.OutData,Result.sb,nr,nil);
+    ReadFile(FileHandle,Result.OutData^,Result.sb,nr,nil);
     CloseHandle(FileHandle);
     DeleteFile(PChar(s));
   end
