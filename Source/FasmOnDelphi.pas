@@ -104,10 +104,6 @@ type
     OutStr:string;
     Lines:array of TFasmLine;
   end;
-  TErrorNamePair=record
-    Name:string;
-    Code:TFasmError;
-  end;
 
 const
   FasmPath='fasm';
@@ -364,12 +360,13 @@ end
 else
 begin
 {$ENDIF}
-  s:=FasmTemp+GetTickCount64.ToString();
   {$IFDEF MSWINDOWS}
+  s:=FasmTemp+GetTickCount.ToString();
   FileHandle:=CreateFile(PChar(s+'.in'),GENERIC_WRITE,0,nil,CREATE_ALWAYS,128,0);
   WriteFile(FileHandle,PAnsiChar(Source)^,length(Source),nr,nil);
   CloseHandle(FileHandle);
   {$ELSE}
+  s:=FasmTemp+GetTickCount64.ToString();
   AssignFile(f,PChar(s+'.in'));
   rewrite(f);
   write(f,Source);
@@ -486,12 +483,13 @@ end
 else
 begin
 {$ENDIF}
-  s:=FasmTemp+GetTickCount64.ToString();
   {$IFDEF MSWINDOWS}
+  s:=FasmTemp+GetTickCount.ToString();
   FileHandle:=CreateFile(PChar(s),GENERIC_WRITE,0,nil,CREATE_ALWAYS,128,0);
   WriteFile(FileHandle,PAnsiChar(Source)^,length(Source),nr,nil);
   CloseHandle(FileHandle);
   {$ELSE}
+  s:=FasmTemp+GetTickCount64.ToString();
   AssignFile(f,PChar(s));
   rewrite(f);
   write(f,Source);

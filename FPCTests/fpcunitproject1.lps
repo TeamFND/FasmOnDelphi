@@ -8,6 +8,7 @@
       <Unit0>
         <Filename Value="fpcunitproject1.lpr"/>
         <IsPartOfProject Value="True"/>
+        <IsVisibleTab Value="True"/>
         <CursorPos Y="9"/>
         <UsageCount Value="23"/>
         <Loaded Value="True"/>
@@ -25,7 +26,6 @@
       <Unit2>
         <Filename Value="..\Source\FasmOnDelphi.pas"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="3"/>
         <TopLine Value="172"/>
         <CursorPos X="25" Y="195"/>
