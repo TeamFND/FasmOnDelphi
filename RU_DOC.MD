@@ -1,9 +1,9 @@
-#Описание функций FasmOnDelphi:
+# Описание функций FasmOnDelphi:
 
-###function FasmVersion:TFasmVersion;
+### function FasmVersion:TFasmVersion;
 Возвращает версию ассемблера в структуре TFasmVersion.
 
-###function FasmAssemble(const Source:AnsiString;cbMemorySize:cardinal=1024*1024;nPassesLimit:DWORD=100):TFasmResult;
+### function FasmAssemble(const Source:AnsiString;cbMemorySize:cardinal=1024*1024;nPassesLimit:DWORD=100):TFasmResult;
 Компилирует код.
 
 Source содержит исходный код для компиляции.
@@ -14,27 +14,27 @@ nPassesLimit - максимальное количество проходов к
 
 Возвращает структуру TFasmResult с информацией об ошибке или скомпилированным кодом.
 
-###function FasmAssembleToFile(const Source,OutFile:AnsiString;cbMemorySize:cardinal=1024*1024*8;nPassesLimit:DWORD=100):TFasmResult;
+### function FasmAssembleToFile(const Source,OutFile:AnsiString;cbMemorySize:cardinal=1024*1024*8;nPassesLimit:DWORD=100):TFasmResult;
 Эдентично FasmAssemble, но выход будет записан в файл(имя передаётся в OutFile).
 
-###function FasmAssembleFile(const Source:AnsiString;cbMemorySize:cardinal=1024*1024*8;nPassesLimit:DWORD=100):TFasmResult;
+### function FasmAssembleFile(const Source:AnsiString;cbMemorySize:cardinal=1024*1024*8;nPassesLimit:DWORD=100):TFasmResult;
 Эдентично FasmAssemble, но код будет взят из файла(имя передаётся в Source).
 
-###function FasmAssembleFileToFile(const Source,OutFile:AnsiString;cbMemorySize:cardinal=1024*1024*8;nPassesLimit:DWORD=100):TFasmResult;
+### function FasmAssembleFileToFile(const Source,OutFile:AnsiString;cbMemorySize:cardinal=1024*1024*8;nPassesLimit:DWORD=100):TFasmResult;
 Эдентично FasmAssembleFile, но выход будет записан в файл(имя передаётся в OutFile).
 
-###procedure OpenFASM(Location:string=FASMPath;AsDll:boolean=false);
+### procedure OpenFASM(Location:string=FASMPath;AsDll:boolean=false);
 Инициализирует Flat Assembler. 
 
 Location - путь до fasm.exe/fasm.dll (только Win32).
 
 AsDll - установить в True если используется DLL версия компилятора иначе False (вне Win32 игнорируется).
 
-###procedure SetFasmTemp(Path:string);
+### procedure SetFasmTemp(Path:string);
 Выбирает каталог для temp файлов.
 
 **********************************************************
-#Описание типов FasmOnDelphi:
+# Описание типов FasmOnDelphi:
 
     TFasmError=FASMERR_ASSERTION_FAILED ..FASM_ERROR;
 
