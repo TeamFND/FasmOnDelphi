@@ -19,10 +19,15 @@ interface
   {$UNDEF USEIOUtils}
 {$ENDIF}
 
+{$IFDEF FPC}
+  {$MODE Delphi}
+{$ENDIF}
+
 uses
   SysUtils,
   {$IFDEF USEFasm4Delphi}Fasm4Delphi,{$ENDIF}
-  {$IFDEF USEIOUtils}System.IOUtils,{$ENDIF}Windows,Math;
+  {$IFDEF USEIOUtils}System.IOUtils,{$ENDIF}
+  {$IFDEF MSWINDOWS}Windows,{$ELSE}Unix,{$ENDIF}Math;
 
 type
   TFasmVersion={$IFDEF USEFasm4Delphi}Fasm4Delphi.TFasmVersion;
@@ -179,8 +184,12 @@ procedure SetFasmTemp(Path:string);
 implementation
 
 {$IFDEF FPC}
+{$IFDEF MSWINDOWS}
 function GetLongPathNameA(lpszShortPath: LPSTR; lpszLongPath: LPSTR;
   cchBuffer: DWORD): DWORD; stdcall;external 'Kernel32.dll';
+{$ELSE}
+type TBinFile=File Of byte;
+{$ENDIF}
 
 function Pos(const SubStr,Str:AnsiString;Offset:Integer=0):Integer;
 var
@@ -211,6 +220,7 @@ var
   IsDll:boolean=false;
 
 function RunFasm(Command:AnsiString):string;
+{$IFDEF MSWINDOWS}
 var
   StartupInfo:TStartupInfo;
   ProcessInformation:TProcessInformation;
@@ -244,6 +254,25 @@ CloseHandle(StartupInfo.hStdOutput);
 CloseHandle(ProcessInformation.hThread);
 CloseHandle(ProcessInformation.hProcess);
 end;
+{$ELSE}          
+var
+  OutPut:Text;
+  s,ss:string;
+begin
+popen(OutPut,FasmLocation+' '+Command,'r');
+sleep(100);
+Readln(OutPut,Result);
+ss:=Result;
+s:='';
+while(ss<>s)do
+begin                  
+  ss:=s;
+  Read(OutPut,s);
+  Result:=Result+sLineBreak+s;
+end;
+pclose(Output);
+end;
+{$ENDIF}
 
 function FasmVersion:TFasmVersion;
 const
@@ -284,11 +313,18 @@ var
   Mem:PFASM_STATE;
   p:PLINE_HEADER;
 {$ELSE}
+  {$IFDEF MSWINDOWS}
   p:pointer;
+  {$ENDIF}
 {$ENDIF}
   s,s0:string;
   nr:cardinal;
+  {$IFDEF MSWINDOWS}
   FileHandle:THandle;
+  {$ELSE}
+  f:Text;
+  bf:TBinFile;
+  {$ENDIF}
   i,i1:NativeUInt;
   i0:TFasmError;
 begin
@@ -328,10 +364,17 @@ end
 else
 begin
 {$ENDIF}
-  s:=FasmTemp+GetTickCount.ToString();
+  s:=FasmTemp+GetTickCount64.ToString();
+  {$IFDEF MSWINDOWS}
   FileHandle:=CreateFile(PChar(s+'.in'),GENERIC_WRITE,0,nil,CREATE_ALWAYS,128,0);
   WriteFile(FileHandle,PAnsiChar(Source)^,length(Source),nr,nil);
   CloseHandle(FileHandle);
+  {$ELSE}
+  AssignFile(f,PChar(s+'.in'));
+  rewrite(f);
+  write(f,Source);
+  closeFile(f);
+  {$ENDIF}
   Result.OutStr:=RunFasm('-m '+trunc(cbMemorySize/1024).ToString+' -p '+nPassesLimit.ToString+' '+
     s+'.in '+s);
   DeleteFile(PChar(s+'.in'));
@@ -345,11 +388,20 @@ begin
         Result.Error:=i0;
   if Result.Error=FASM_OK then
   begin
+    {$IFDEF MSWINDOWS}
     FileHandle:=CreateFile(PChar(s),GENERIC_READ,0,nil,3,128,0);
     Result.sb:=GetFileSize(FileHandle,nil);
     getmem(Result.OutData,Result.sb);
     ReadFile(FileHandle,Result.OutData^,Result.sb,nr,nil);
-    CloseHandle(FileHandle);
+    CloseHandle(FileHandle); 
+    {$ELSE}
+    AssignFile(bf,PChar(s));
+    reset(bf);
+    Result.sb:=FileSize(bf);
+    getmem(Result.OutData,Result.sb);
+    blockread(bf,Result.OutData^,Result.sb);
+    closeFile(bf);
+    {$ENDIF}
     DeleteFile(PChar(s));
   end
   else
@@ -383,12 +435,18 @@ var
 {$IFDEF USEFasm4Delphi}
   Mem:PFASM_STATE;
   p:PLINE_HEADER;
-{$ELSE}
-  p:pointer;
+{$ELSE}       
+  {$IFDEF MSWINDOWS}
+  p:pointer;      
+  {$ENDIF}
 {$ENDIF}
   s,s0:string;
   nr:cardinal;
+  {$IFDEF MSWINDOWS}
   FileHandle:THandle;
+  {$ELSE}
+  f:Text;
+  {$ENDIF}
   i,i1:NativeUInt;
   i0:TFasmError;
 begin
@@ -428,10 +486,17 @@ end
 else
 begin
 {$ENDIF}
-  s:=FasmTemp+GetTickCount.ToString();
+  s:=FasmTemp+GetTickCount64.ToString();
+  {$IFDEF MSWINDOWS}
   FileHandle:=CreateFile(PChar(s),GENERIC_WRITE,0,nil,CREATE_ALWAYS,128,0);
   WriteFile(FileHandle,PAnsiChar(Source)^,length(Source),nr,nil);
   CloseHandle(FileHandle);
+  {$ELSE}
+  AssignFile(f,PChar(s));
+  rewrite(f);
+  write(f,Source);
+  closeFile(f);
+  {$ENDIF}
   Result.OutStr:=RunFasm('-m '+trunc(cbMemorySize/1024).ToString+' -p '+nPassesLimit.ToString+' '+
     s+' '+OutFile);
   DeleteFile(PChar(s));
@@ -479,7 +544,11 @@ var
 {$ENDIF}
   s,s0:string;
   nr:cardinal;
+  {$IFDEF MSWINDOWS}
   FileHandle:THandle;
+  {$ELSE}
+  bf:TBinFile;
+  {$ENDIF}
   i,i1:NativeUInt;
   i0:TFasmError;
 begin
@@ -531,12 +600,21 @@ begin
       if FasmErrorCodeNames[i0]=s0 then
         Result.Error:=i0;
   if Result.Error=FASM_OK then
-  begin
+  begin          
+    {$IFDEF MSWINDOWS}
     FileHandle:=CreateFile(PChar(s),GENERIC_READ,0,nil,3,128,0);
     Result.sb:=GetFileSize(FileHandle,nil);
     getmem(Result.OutData,Result.sb);
     ReadFile(FileHandle,Result.OutData^,Result.sb,nr,nil);
     CloseHandle(FileHandle);
+    {$ELSE}
+    AssignFile(bf,s);
+    reset(bf);
+    Result.sb:=FileSize(bf);
+    getmem(Result.OutData,Result.sb);
+    blockread(bf,Result.OutData^,Result.sb);
+    closeFile(bf);
+    {$ENDIF}
     DeleteFile(PChar(s));
   end
   else
@@ -677,13 +755,13 @@ begin
 FasmTemp:=Path;
 end;
 
-{$IFDEF FPC}{$IFDEF WINDOWS}
+{$IFDEF FPC}{$IFDEF MSWINDOWS}
 var
   Len:Integer;
 {$ENDIF}{$ENDIF}
 initialization
 {$IFDEF FPC}
-{$IFDEF WINDOWS}
+{$IFDEF MSWINDOWS}
 begin
   SetLength(FasmTemp,MAX_PATH);
   Len:=GetTempPath(MAX_PATH,PChar(FasmTemp));
@@ -697,7 +775,7 @@ begin
     FasmTemp:='';
 end;
 {$ELSE}
-FasmTemp:='/tmp';
+FasmTemp:='/tmp/';
 {$ENDIF}
 {$ELSE}
 FasmTemp:=TPath.GetTempPath;
