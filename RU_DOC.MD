@@ -1,9 +1,10 @@
-# Описание функций FasmOnDelphi:
+﻿# Описание функций FasmOnDelphi:
 
 ### function FasmVersion:TFasmVersion;
 Возвращает версию ассемблера в структуре TFasmVersion.
 
-### function FasmAssemble(const Source:AnsiString;cbMemorySize:cardinal=1024*1024;nPassesLimit:DWORD=100):TFasmResult;
+### function FasmAssemble(const Source:AnsiString;cbMemorySize:cardinal=1024*1024;nPassesLimit:DWORD=100):TFasmResul;
+
 Компилирует код.
 
 Source - содержит исходный код для компиляции.
