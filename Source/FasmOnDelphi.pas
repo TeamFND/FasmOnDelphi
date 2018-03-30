@@ -759,22 +759,7 @@ var
 {$ENDIF}{$ENDIF}
 initialization
 {$IFDEF FPC}
-{$IFDEF MSWINDOWS}
-begin
-  SetLength(FasmTemp,MAX_PATH);
-  Len:=GetTempPath(MAX_PATH,PChar(FasmTemp));
-  if Len<>0 then
-  begin
-    Len:=GetLongPathNameA(PChar(FasmTemp),nil,0);
-    GetLongPathNameA(PChar(FasmTemp),PChar(FasmTemp),Len);
-    SetLength(FasmTemp,Len-1);
-  end
-  else
-    FasmTemp:='';
-end;
-{$ELSE}
-FasmTemp:='/tmp/';
-{$ENDIF}
+GetTempDir;
 {$ELSE}
 FasmTemp:=TPath.GetTempPath;
 {$ENDIF}
