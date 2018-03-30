@@ -1,3 +1,3 @@
 [submodule "Fasm4Delphi"]
 	path = Fasm4Delphi
-	url = git@git.teamfnd.ru:artem3213212/Fasm4Delphi.git
+	url = https://github.com/TeamFND/Fasm4Delphi.git
