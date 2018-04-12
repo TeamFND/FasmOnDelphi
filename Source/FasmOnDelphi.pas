@@ -270,6 +270,23 @@ pclose(Output);
 end;
 {$ENDIF}
 
+function LocalStrComp(s1,s2:string):boolean;inline;
+var
+  i,n:NativeUInt;
+begin
+if length(s1)>length(s2) then
+  n:=length(s2)
+else
+  n:=length(s1);
+Result:=true;
+for i:=1 to n do
+  if s1[i]<>s2[i] then
+  begin
+    Result:=false;
+    break;
+  end;
+end;
+
 function FasmVersion:TFasmVersion;
 const
   preverstr='version ';
@@ -376,12 +393,12 @@ begin
     s+'.in '+s);
   DeleteFile(PChar(s+'.in'));
   i:=Pos('error: ',Result.OutStr);
-  s0:=Copy(Result.OutStr,i+length('error: '),Pos('.',Result.OutStr,i)-i-length('error: '));
+  s0:=Copy(Result.OutStr,i+length('error: '),Pos(sLineBreak,Result.OutStr,i)-i-length('error: '));
   if i=0 then
     Result.Error:=FASM_OK
   else
     for i0:=FASMERR_ASSERTION_FAILED to FASM_ERROR do
-      if FasmErrorCodeNames[i0]=s0 then
+      if LocalStrComp(FasmErrorCodeNames[i0],s0)then
         Result.Error:=i0;
   if Result.Error=FASM_OK then
   begin
@@ -499,12 +516,12 @@ begin
     s+' '+OutFile);
   DeleteFile(PChar(s));
   i:=Pos('error: ',Result.OutStr);
-  s0:=Copy(Result.OutStr,i+length('error: '),Pos('.',Result.OutStr,i)-i-length('error: '));
+  s0:=Copy(Result.OutStr,i+length('error: '),Pos(sLineBreak,Result.OutStr,i)-i-length('error: '));
   if i=0 then
     Result.Error:=FASM_OK
   else
     for i0:=FASMERR_ASSERTION_FAILED to FASM_ERROR do
-      if FasmErrorCodeNames[i0]=s0 then
+      if LocalStrComp(FasmErrorCodeNames[i0],s0)then
         Result.Error:=i0;
   Result.OutData:=nil;
   Result.sb:=0;
@@ -590,12 +607,12 @@ begin
   Result.OutStr:=RunFasm('-m '+trunc(cbMemorySize/1024).ToString+' -p '+nPassesLimit.ToString+' '+
     Source+' '+s);
   i:=Pos('error: ',Result.OutStr);
-  s0:=Copy(Result.OutStr,i+length('error: '),Pos('.',Result.OutStr,i)-i-length('error: '));
+  s0:=Copy(Result.OutStr,i+length('error: '),Pos(sLineBreak,Result.OutStr,i)-i-length('error: '));
   if i=0 then
     Result.Error:=FASM_OK
   else
     for i0:=FASMERR_ASSERTION_FAILED to FASM_ERROR do
-      if FasmErrorCodeNames[i0]=s0 then
+      if LocalStrComp(FasmErrorCodeNames[i0],s0)then
         Result.Error:=i0;
   if Result.Error=FASM_OK then
   begin          
@@ -696,12 +713,12 @@ begin
   Result.OutStr:=RunFasm('-m '+trunc(cbMemorySize/1024).ToString+' -p '+nPassesLimit.ToString+' '+
     Source+' '+OutFile);
   i:=Pos('error: ',Result.OutStr);
-  s0:=Copy(Result.OutStr,i+length('error: '),Pos('.',Result.OutStr,i)-i-length('error: '));
+  s0:=Copy(Result.OutStr,i+length('error: '),Pos(sLineBreak,Result.OutStr,i)-i-length('error: '));
   if i=0 then
     Result.Error:=FASM_OK
   else
     for i0:=FASMERR_ASSERTION_FAILED to FASM_ERROR do
-      if FasmErrorCodeNames[i0]=s0 then
+      if LocalStrComp(FasmErrorCodeNames[i0],s0)then
         Result.Error:=i0;
   Result.OutData:=nil;
   Result.sb:=0;
