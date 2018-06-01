@@ -1,7 +1,10 @@
+//****************************************************
+//*Copyright (c) 2018 Artem Gavrilov,Vlad Untkin.    *
+//*Website: https://teamfnd.ru			     *
+//*License: MIT 				     *
+//*Donate: https://money.yandex.ru/to/410014959153552*
+//****************************************************
 unit FasmOnDelphi;
-
-{Delphi Translation&Tests:Artyom Gavrilov,Vlad Untkin.
- Donate:https://money.yandex.ru/to/410014959153552}
 
 interface
 
@@ -199,8 +202,8 @@ begin
     for Offset:=1 to Length(SubStr)-1 do
       if SubStr[1+Offset]<>Str[Result+Offset] then
       begin
-        f:=false;
-        break;
+	f:=false;
+	break;
       end;
     if f then
       exit;
@@ -250,7 +253,7 @@ CloseHandle(StartupInfo.hStdOutput);
 CloseHandle(ProcessInformation.hThread);
 CloseHandle(ProcessInformation.hProcess);
 end;
-{$ELSE}          
+{$ELSE} 	 
 var
   OutPut:Text;
   s,ss:string;
@@ -261,7 +264,7 @@ Readln(OutPut,Result);
 ss:=Result;
 s:='';
 while(ss<>s)do
-begin                  
+begin		       
   ss:=s;
   Read(OutPut,s);
   Result:=Result+sLineBreak+s;
@@ -364,7 +367,7 @@ begin
     while(NativeUInt(p)>=NativeUInt(Mem))and(NativeUInt(Mem)+NativeUInt(cbMemorySize)>=NativeUInt(p))do
     begin
       Result.OutStr:=Result.OutStr+sLineBreak+
-        string(p^.file_path)+'['+p^.line_number.ToString+']';
+	string(p^.file_path)+'['+p^.line_number.ToString+']';
       inc(nr);
       SetLength(Result.Lines,nr);
       Result.Lines[nr-1].Line:=p^.line_number;
@@ -399,7 +402,7 @@ begin
   else
     for i0:=FASMERR_ASSERTION_FAILED to FASM_ERROR do
       if LocalStrComp(FasmErrorCodeNames[i0],s0)then
-        Result.Error:=i0;
+	Result.Error:=i0;
   if Result.Error=FASM_OK then
   begin
     {$IFDEF MSWINDOWS}
@@ -435,7 +438,7 @@ begin
       i1:=Pos(']:',Result.OutStr,i);
       Result.Lines[nr-1].Line:=Copy(Result.OutStr,i,i1-i).ToInteger;
       for i0:=0 to 2 do
-        i:=Pos(sLineBreak,Result.OutStr,i)+length(sLineBreak);
+	i:=Pos(sLineBreak,Result.OutStr,i)+length(sLineBreak);
       i1:=Pos(']:',Result.OutStr,i);
     end;
   end;
@@ -451,7 +454,7 @@ var
   p:PLINE_HEADER;
 {$ELSE}       
   {$IFDEF MSWINDOWS}
-  p:pointer;      
+  p:pointer;	  
   {$ENDIF}
 {$ENDIF}
   s,s0:string;
@@ -487,7 +490,7 @@ begin
     while(NativeUInt(p)>=NativeUInt(Mem))and(NativeUInt(Mem)+NativeUInt(cbMemorySize)>=NativeUInt(p))do
     begin
       Result.OutStr:=Result.OutStr+sLineBreak+
-        string(p^.file_path)+'['+p^.line_number.ToString+']';
+	string(p^.file_path)+'['+p^.line_number.ToString+']';
       inc(nr);
       SetLength(Result.Lines,nr);
       Result.Lines[nr-1].Line:=p^.line_number;
@@ -522,7 +525,7 @@ begin
   else
     for i0:=FASMERR_ASSERTION_FAILED to FASM_ERROR do
       if LocalStrComp(FasmErrorCodeNames[i0],s0)then
-        Result.Error:=i0;
+	Result.Error:=i0;
   Result.OutData:=nil;
   Result.sb:=0;
   if Result.Error<>FASM_OK then
@@ -540,7 +543,7 @@ begin
       i1:=Pos(']:',Result.OutStr,i);
       Result.Lines[nr-1].Line:=Copy(Result.OutStr,i,i1-i).ToInteger;
       for i0:=0 to 2 do
-        i:=Pos(sLineBreak,Result.OutStr,i)+length(sLineBreak);
+	i:=Pos(sLineBreak,Result.OutStr,i)+length(sLineBreak);
       i1:=Pos(']:',Result.OutStr,i);
     end;
   end;
@@ -590,7 +593,7 @@ begin
     while(NativeUInt(p)>=NativeUInt(Mem))and(NativeUInt(Mem)+NativeUInt(cbMemorySize)>=NativeUInt(p))do
     begin
       Result.OutStr:=Result.OutStr+sLineBreak+
-        string(p^.file_path)+'['+p^.line_number.ToString+']';
+	string(p^.file_path)+'['+p^.line_number.ToString+']';
       inc(nr);
       SetLength(Result.Lines,nr);
       Result.Lines[nr-1].Line:=p^.line_number;
@@ -613,9 +616,9 @@ begin
   else
     for i0:=FASMERR_ASSERTION_FAILED to FASM_ERROR do
       if LocalStrComp(FasmErrorCodeNames[i0],s0)then
-        Result.Error:=i0;
+	Result.Error:=i0;
   if Result.Error=FASM_OK then
-  begin          
+  begin 	 
     {$IFDEF MSWINDOWS}
     FileHandle:=CreateFile(PChar(s),GENERIC_READ,0,nil,3,128,0);
     Result.sb:=GetFileSize(FileHandle,nil);
@@ -649,7 +652,7 @@ begin
       i1:=Pos(']:',Result.OutStr,i);
       Result.Lines[nr-1].Line:=Copy(Result.OutStr,i,i1-i).ToInteger;
       for i0:=0 to 2 do
-        i:=Pos(sLineBreak,Result.OutStr,i)+length(sLineBreak);
+	i:=Pos(sLineBreak,Result.OutStr,i)+length(sLineBreak);
       i1:=Pos(']:',Result.OutStr,i);
     end;
   end;
@@ -697,7 +700,7 @@ begin
     while(NativeUInt(p)>=NativeUInt(Mem))and(NativeUInt(Mem)+NativeUInt(cbMemorySize)>=NativeUInt(p))do
     begin
       Result.OutStr:=Result.OutStr+sLineBreak+
-        string(p^.file_path)+'['+p^.line_number.ToString+']';
+	string(p^.file_path)+'['+p^.line_number.ToString+']';
       inc(nr);
       SetLength(Result.Lines,nr);
       Result.Lines[nr-1].Line:=p^.line_number;
@@ -719,7 +722,7 @@ begin
   else
     for i0:=FASMERR_ASSERTION_FAILED to FASM_ERROR do
       if LocalStrComp(FasmErrorCodeNames[i0],s0)then
-        Result.Error:=i0;
+	Result.Error:=i0;
   Result.OutData:=nil;
   Result.sb:=0;
   if Result.Error=FASM_OK then
@@ -737,7 +740,7 @@ begin
       i1:=Pos(']:',Result.OutStr,i);
       Result.Lines[nr-1].Line:=Copy(Result.OutStr,i,i1-i).ToInteger;
       for i0:=0 to 2 do
-        i:=Pos(sLineBreak,Result.OutStr,i)+length(sLineBreak);
+	i:=Pos(sLineBreak,Result.OutStr,i)+length(sLineBreak);
       i1:=Pos(']:',Result.OutStr,i);
     end;
   end;
